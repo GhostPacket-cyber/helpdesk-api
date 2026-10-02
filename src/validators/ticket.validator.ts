@@ -40,6 +40,14 @@ export const assignTicketSchema = z.object({
   technicianId: z.uuid('technicianId deve ser um identificador válido.').optional(),
 });
 
+// Aqui só se confere que o valor é um status existente; se a transição é permitida é regra do service
+export const updateTicketStatusSchema = z.object({
+  status: z.enum(
+    ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED'],
+    'Status deve ser OPEN, IN_PROGRESS, WAITING, RESOLVED ou CLOSED.',
+  ),
+});
+
 // O id do chamado é numérico; na URL ele chega como texto e é convertido
 export const ticketIdParamSchema = z.object({
   id: z.coerce
@@ -52,3 +60,4 @@ export const ticketIdParamSchema = z.object({
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
+export type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;

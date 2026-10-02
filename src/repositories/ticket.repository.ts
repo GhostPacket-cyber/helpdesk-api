@@ -49,4 +49,15 @@ export const ticketRepository = {
 
     return count === 1;
   },
+
+  // Muda o status somente se ele ainda for o que o service leu (`from`).
+  // Mesma ideia do claim: evita que duas alterações simultâneas passem por cima uma da outra.
+  async transition(id: number, from: Status, data: { status: Status; closedAt?: Date }): Promise<boolean> {
+    const { count } = await prisma.ticket.updateMany({
+      where: { id, status: from },
+      data,
+    });
+
+    return count === 1;
+  },
 };

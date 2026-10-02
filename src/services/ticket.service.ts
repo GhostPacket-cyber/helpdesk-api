@@ -1,9 +1,14 @@
 import { AppError } from '../errors/AppError';
-import { Prisma, Ticket } from '../generated/prisma/client';
+import { Prisma, Status, Ticket } from '../generated/prisma/client';
 import { ticketRepository } from '../repositories/ticket.repository';
 import { userRepository } from '../repositories/user.repository';
 import type { AuthUser } from '../types/express';
-import { AssignTicketInput, CreateTicketInput, UpdateTicketInput } from '../validators/ticket.validator';
+import {
+  AssignTicketInput,
+  CreateTicketInput,
+  UpdateTicketInput,
+  UpdateTicketStatusInput,
+} from '../validators/ticket.validator';
 
 type TicketField = keyof UpdateTicketInput;
 
@@ -48,6 +53,16 @@ function editableFields(actor: AuthUser, ticket: Ticket): TicketField[] {
   }
   return [];
 }
+
+// Máquina de estados do chamado: para cada status, quais são os próximos permitidos.
+// OPEN não tem saída aqui porque só vira IN_PROGRESS ao receber um técnico (rota /assign).
+const STATUS_TRANSITIONS: Record<Status, Status[]> = {
+  OPEN: [],
+  IN_PROGRESS: ['WAITING', 'RESOLVED'],
+  WAITING: ['IN_PROGRESS', 'RESOLVED'],
+  RESOLVED: ['CLOSED', 'IN_PROGRESS'],
+  CLOSED: [],
+};
 
 function alreadyAssigned(): AppError {
   return new AppError(409, 'TICKET_ALREADY_ASSIGNED', 'Este chamado já está atribuído a um técnico.');
@@ -134,5 +149,40 @@ export const ticketService = {
     }
 
     return ticketRepository.update(id, { technicianId, status });
+  },
+
+  async changeStatus(id: number, { status: next }: UpdateTicketStatusInput, actor: AuthUser) {
+    const ticket = await this.getById(id, actor);
+
+    // Quem atende é quem move o chamado: o técnico responsável ou um administrador
+    if (actor.role !== 'ADMIN' && ticket.technicianId !== actor.id) {
+      throw new AppError(
+        403,
+        'NOT_TICKET_TECHNICIAN',
+        'Apenas o técnico responsável ou um administrador pode alterar o status.',
+      );
+    }
+
+    const current = ticket.status;
+    const allowed = STATUS_TRANSITIONS[current];
+
+    if (!allowed.includes(next)) {
+      throw new AppError(
+        409,
+        'INVALID_STATUS_TRANSITION',
+        `Não é possível alterar o status de ${current} para ${next}.`,
+        { from: current, to: next, allowed },
+      );
+    }
+
+    // A data de encerramento é registrada no momento em que o chamado é fechado
+    const closedAt = next === 'CLOSED' ? new Date() : undefined;
+
+    const changed = await ticketRepository.transition(id, current, { status: next, closedAt });
+    if (!changed) {
+      throw new AppError(409, 'TICKET_STATUS_CHANGED', 'O status do chamado foi alterado por outra pessoa. Consulte-o novamente.');
+    }
+
+    return (await ticketRepository.findById(id))!;
   },
 };

@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { assignTicket, createTicket, getTicket, listTickets, updateTicket } from '../controllers/ticket.controller';
+import {
+  assignTicket,
+  createTicket,
+  getTicket,
+  listTickets,
+  updateTicket,
+  updateTicketStatus,
+} from '../controllers/ticket.controller';
 import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
 import { validateBody, validateParams } from '../middlewares/validate';
@@ -8,6 +15,7 @@ import {
   createTicketSchema,
   ticketIdParamSchema,
   updateTicketSchema,
+  updateTicketStatusSchema,
 } from '../validators/ticket.validator';
 
 const router = Router();
@@ -25,6 +33,13 @@ router.post(
   validateParams(ticketIdParamSchema),
   validateBody(assignTicketSchema),
   assignTicket,
+);
+router.patch(
+  '/:id/status',
+  authorize('TECH', 'ADMIN'),
+  validateParams(ticketIdParamSchema),
+  validateBody(updateTicketStatusSchema),
+  updateTicketStatus,
 );
 
 export default router;
