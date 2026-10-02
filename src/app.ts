@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import routes from './routes';
 
 const app = express();
@@ -8,12 +9,10 @@ app.use(express.json());
 
 app.use(routes);
 
-// Nenhuma rota acima respondeu: devolve 404 no formato padrão de erro da API
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'ROUTE_NOT_FOUND',
-    message: 'Rota não encontrada.',
-  });
-});
+// Nenhuma rota acima respondeu
+app.use(notFoundHandler);
+
+// Sempre por último: recebe todo erro lançado nas rotas e middlewares
+app.use(errorHandler);
 
 export default app;
