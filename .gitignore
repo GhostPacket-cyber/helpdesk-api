@@ -1,0 +1,22 @@
+# Dependências
+node_modules/
+
+# Código compilado
+dist/
+
+# Variáveis de ambiente (nunca vão para o Git)
+.env
+.env.*
+!.env.example
+
+# Testes
+coverage/
+
+# Logs
+*.log
+
+# Editor / sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
