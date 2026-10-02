@@ -1,5 +1,6 @@
 import { AppError } from '../errors/AppError';
 import { Prisma, Status, Ticket } from '../generated/prisma/client';
+import { HistoryEntry } from '../repositories/history.repository';
 import { ticketRepository } from '../repositories/ticket.repository';
 import { userRepository } from '../repositories/user.repository';
 import type { AuthUser } from '../types/express';
@@ -71,7 +72,7 @@ function alreadyAssigned(): AppError {
 export const ticketService = {
   create(data: CreateTicketInput, actor: AuthUser) {
     // O solicitante é sempre o usuário autenticado, nunca um valor vindo do body
-    return ticketRepository.create({ ...data, requesterId: actor.id });
+    return ticketRepository.create({ ...data, requesterId: actor.id }, [{ action: 'CREATED', userId: actor.id }]);
   },
 
   list(actor: AuthUser) {
@@ -106,7 +107,25 @@ export const ticketService = {
       throw new AppError(403, 'TICKET_FIELD_NOT_ALLOWED', 'Você não pode alterar estes campos do chamado.', denied);
     }
 
-    return ticketRepository.update(id, data);
+    // Só entra no histórico o que de fato mudou de valor
+    const changed = (Object.keys(data) as TicketField[]).filter((field) => data[field] !== ticket[field]);
+    if (changed.length === 0) {
+      return ticket;
+    }
+
+    const history: HistoryEntry[] = [];
+
+    if (changed.includes('priority')) {
+      history.push({ action: 'PRIORITY_CHANGED', oldValue: ticket.priority, newValue: data.priority, userId: actor.id });
+    }
+
+    // Título, descrição e categoria: registra-se quais campos mudaram, sem copiar os textos
+    const otherFields = changed.filter((field) => field !== 'priority');
+    if (otherFields.length > 0) {
+      history.push({ action: 'UPDATED', newValue: otherFields.join(', '), userId: actor.id });
+    }
+
+    return ticketRepository.update(id, data, history);
   },
 
   // TECH assume o chamado para si; ADMIN atribui (ou reatribui) a um técnico
@@ -120,12 +139,22 @@ export const ticketService = {
     // Chamado que ainda não começou a ser atendido entra em atendimento ao receber um técnico
     const status = ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status;
 
+    const historyFor = (technicianName: string): HistoryEntry[] => {
+      const entries: HistoryEntry[] = [
+        { action: 'ASSIGNED', oldValue: ticket.technician?.name, newValue: technicianName, userId: actor.id },
+      ];
+      if (status !== ticket.status) {
+        entries.push({ action: 'STATUS_CHANGED', oldValue: ticket.status, newValue: status, userId: actor.id });
+      }
+      return entries;
+    };
+
     if (actor.role === 'TECH') {
       if (technicianId && technicianId !== actor.id) {
         throw new AppError(403, 'CANNOT_ASSIGN_TO_OTHERS', 'Técnicos só podem assumir chamados para si mesmos.');
       }
 
-      const claimed = await ticketRepository.claim(id, actor.id, status);
+      const claimed = await ticketRepository.claim(id, actor.id, status, historyFor(actor.name));
       if (!claimed) {
         throw alreadyAssigned();
       }
@@ -148,7 +177,7 @@ export const ticketService = {
       throw new AppError(400, 'INVALID_TECHNICIAN', 'O usuário informado não é um técnico ativo.');
     }
 
-    return ticketRepository.update(id, { technicianId, status });
+    return ticketRepository.update(id, { technicianId, status }, historyFor(technician.name));
   },
 
   async changeStatus(id: number, { status: next }: UpdateTicketStatusInput, actor: AuthUser) {
@@ -178,7 +207,9 @@ export const ticketService = {
     // A data de encerramento é registrada no momento em que o chamado é fechado
     const closedAt = next === 'CLOSED' ? new Date() : undefined;
 
-    const changed = await ticketRepository.transition(id, current, { status: next, closedAt });
+    const changed = await ticketRepository.transition(id, current, { status: next, closedAt }, [
+      { action: 'STATUS_CHANGED', oldValue: current, newValue: next, userId: actor.id },
+    ]);
     if (!changed) {
       throw new AppError(409, 'TICKET_STATUS_CHANGED', 'O status do chamado foi alterado por outra pessoa. Consulte-o novamente.');
     }

@@ -13,6 +13,11 @@ const users: { name: string; email: string; role: Role }[] = [
   { name: 'Maria Usuária', email: 'maria@helpdesk.local', role: 'USER' },
 ];
 
+// Datas no passado, para os chamados e o histórico terem uma linha do tempo realista
+function minutesAgo(minutes: number): Date {
+  return new Date(Date.now() - minutes * 60_000);
+}
+
 async function seedUsers(passwordHash: string) {
   const byEmail = new Map<string, string>();
 
@@ -46,7 +51,8 @@ async function seedTickets(idOf: (email: string) => string) {
       description: 'A impressora liga, mas os documentos ficam parados na fila.',
       category: 'PRINTER',
       requesterId: joao,
-      history: { create: [{ action: 'CREATED', userId: joao }] },
+      createdAt: minutesAgo(30),
+      history: { create: [{ action: 'CREATED', userId: joao, createdAt: minutesAgo(30) }] },
     },
   });
 
@@ -60,14 +66,19 @@ async function seedTickets(idOf: (email: string) => string) {
       status: 'IN_PROGRESS',
       requesterId: maria,
       technicianId: carlos,
-      comments: { create: [{ message: 'Verificando as permissões do seu usuário.', authorId: carlos }] },
+      createdAt: minutesAgo(180),
+      comments: {
+        create: [
+          { message: 'Verificando as permissões do seu usuário.', authorId: carlos, createdAt: minutesAgo(140) },
+        ],
+      },
       history: {
         create: [
-          { action: 'CREATED', userId: maria },
-          { action: 'ASSIGNED', newValue: 'Carlos Técnico', userId: carlos },
-          { action: 'STATUS_CHANGED', oldValue: 'OPEN', newValue: 'IN_PROGRESS', userId: carlos },
-          { action: 'PRIORITY_CHANGED', oldValue: 'MEDIUM', newValue: 'HIGH', userId: carlos },
-          { action: 'COMMENT_ADDED', userId: carlos },
+          { action: 'CREATED', userId: maria, createdAt: minutesAgo(180) },
+          { action: 'ASSIGNED', newValue: 'Carlos Técnico', userId: carlos, createdAt: minutesAgo(150) },
+          { action: 'STATUS_CHANGED', oldValue: 'OPEN', newValue: 'IN_PROGRESS', userId: carlos, createdAt: minutesAgo(149) },
+          { action: 'PRIORITY_CHANGED', oldValue: 'MEDIUM', newValue: 'HIGH', userId: carlos, createdAt: minutesAgo(145) },
+          { action: 'COMMENT_ADDED', userId: carlos, createdAt: minutesAgo(140) },
         ],
       },
     },
@@ -80,16 +91,17 @@ async function seedTickets(idOf: (email: string) => string) {
       description: 'A rede aparece na lista, mas a conexão falha após digitar a senha.',
       category: 'NETWORK',
       status: 'CLOSED',
-      closedAt: new Date(),
+      closedAt: minutesAgo(1000),
       requesterId: joao,
       technicianId: carlos,
+      createdAt: minutesAgo(1440),
       history: {
         create: [
-          { action: 'CREATED', userId: joao },
-          { action: 'ASSIGNED', newValue: 'Carlos Técnico', userId: carlos },
-          { action: 'STATUS_CHANGED', oldValue: 'OPEN', newValue: 'IN_PROGRESS', userId: carlos },
-          { action: 'STATUS_CHANGED', oldValue: 'IN_PROGRESS', newValue: 'RESOLVED', userId: carlos },
-          { action: 'STATUS_CHANGED', oldValue: 'RESOLVED', newValue: 'CLOSED', userId: carlos },
+          { action: 'CREATED', userId: joao, createdAt: minutesAgo(1440) },
+          { action: 'ASSIGNED', newValue: 'Carlos Técnico', userId: carlos, createdAt: minutesAgo(1400) },
+          { action: 'STATUS_CHANGED', oldValue: 'OPEN', newValue: 'IN_PROGRESS', userId: carlos, createdAt: minutesAgo(1399) },
+          { action: 'STATUS_CHANGED', oldValue: 'IN_PROGRESS', newValue: 'RESOLVED', userId: carlos, createdAt: minutesAgo(1100) },
+          { action: 'STATUS_CHANGED', oldValue: 'RESOLVED', newValue: 'CLOSED', userId: carlos, createdAt: minutesAgo(1000) },
         ],
       },
     },

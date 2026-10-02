@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createComment, listComments } from '../controllers/comment.controller';
+import { listHistory } from '../controllers/history.controller';
 import {
   assignTicket,
   createTicket,
@@ -47,5 +48,8 @@ router.patch(
 // Comentários são um sub-recurso do chamado: só existem dentro de um
 router.post('/:id/comments', validateParams(ticketIdParamSchema), validateBody(createCommentSchema), createComment);
 router.get('/:id/comments', validateParams(ticketIdParamSchema), listComments);
+
+// O histórico é somente leitura: os registros são criados pelo sistema a cada ação
+router.get('/:id/history', validateParams(ticketIdParamSchema), listHistory);
 
 export default router;

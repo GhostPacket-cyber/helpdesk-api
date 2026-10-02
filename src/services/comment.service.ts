@@ -15,7 +15,9 @@ export const commentService = {
     }
 
     // O autor é sempre o usuário autenticado, nunca um valor vindo do body
-    return commentRepository.create({ message, ticketId, authorId: actor.id });
+    return commentRepository.create({ message, ticketId, authorId: actor.id }, [
+      { action: 'COMMENT_ADDED', userId: actor.id },
+    ]);
   },
 
   async list(ticketId: number, actor: AuthUser) {
