@@ -1,8 +1,9 @@
 import { AppError } from '../errors/AppError';
 import { Prisma, Ticket } from '../generated/prisma/client';
 import { ticketRepository } from '../repositories/ticket.repository';
+import { userRepository } from '../repositories/user.repository';
 import type { AuthUser } from '../types/express';
-import { CreateTicketInput, UpdateTicketInput } from '../validators/ticket.validator';
+import { AssignTicketInput, CreateTicketInput, UpdateTicketInput } from '../validators/ticket.validator';
 
 type TicketField = keyof UpdateTicketInput;
 
@@ -48,6 +49,10 @@ function editableFields(actor: AuthUser, ticket: Ticket): TicketField[] {
   return [];
 }
 
+function alreadyAssigned(): AppError {
+  return new AppError(409, 'TICKET_ALREADY_ASSIGNED', 'Este chamado já está atribuído a um técnico.');
+}
+
 export const ticketService = {
   create(data: CreateTicketInput, actor: AuthUser) {
     // O solicitante é sempre o usuário autenticado, nunca um valor vindo do body
@@ -87,5 +92,47 @@ export const ticketService = {
     }
 
     return ticketRepository.update(id, data);
+  },
+
+  // TECH assume o chamado para si; ADMIN atribui (ou reatribui) a um técnico
+  async assign(id: number, { technicianId }: AssignTicketInput, actor: AuthUser) {
+    const ticket = await this.getById(id, actor);
+
+    if (ticket.status === 'CLOSED') {
+      throw new AppError(409, 'TICKET_CLOSED', 'Chamado encerrado não pode ser alterado.');
+    }
+
+    // Chamado que ainda não começou a ser atendido entra em atendimento ao receber um técnico
+    const status = ticket.status === 'OPEN' ? 'IN_PROGRESS' : ticket.status;
+
+    if (actor.role === 'TECH') {
+      if (technicianId && technicianId !== actor.id) {
+        throw new AppError(403, 'CANNOT_ASSIGN_TO_OTHERS', 'Técnicos só podem assumir chamados para si mesmos.');
+      }
+
+      const claimed = await ticketRepository.claim(id, actor.id, status);
+      if (!claimed) {
+        throw alreadyAssigned();
+      }
+
+      return (await ticketRepository.findById(id))!;
+    }
+
+    if (!technicianId) {
+      throw new AppError(400, 'VALIDATION_ERROR', 'Dados inválidos.', [
+        { field: 'technicianId', message: 'Informe o técnico que receberá o chamado.' },
+      ]);
+    }
+
+    if (technicianId === ticket.technicianId) {
+      throw alreadyAssigned();
+    }
+
+    const technician = await userRepository.findById(technicianId);
+    if (!technician || technician.role !== 'TECH' || !technician.active) {
+      throw new AppError(400, 'INVALID_TECHNICIAN', 'O usuário informado não é um técnico ativo.');
+    }
+
+    return ticketRepository.update(id, { technicianId, status });
   },
 };

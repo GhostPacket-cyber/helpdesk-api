@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma';
-import { Category, Priority, Prisma } from '../generated/prisma/client';
+import { Category, Priority, Prisma, Status } from '../generated/prisma/client';
 
 // Todo chamado é devolvido com um resumo do solicitante e do técnico
 const personSummary = { select: { id: true, name: true, email: true } };
@@ -17,6 +17,8 @@ interface UpdateTicketData {
   description?: string;
   category?: Category;
   priority?: Priority;
+  status?: Status;
+  technicianId?: string;
 }
 
 export const ticketRepository = {
@@ -34,5 +36,17 @@ export const ticketRepository = {
 
   update(id: number, data: UpdateTicketData) {
     return prisma.ticket.update({ where: { id }, data, include });
+  },
+
+  // Atribui o técnico somente se o chamado ainda estiver sem responsável.
+  // A condição faz parte do próprio UPDATE, então dois técnicos simultâneos não se sobrescrevem:
+  // o banco altera a linha para o primeiro e devolve 0 linhas afetadas para o segundo.
+  async claim(id: number, technicianId: string, status: Status): Promise<boolean> {
+    const { count } = await prisma.ticket.updateMany({
+      where: { id, technicianId: null },
+      data: { technicianId, status },
+    });
+
+    return count === 1;
   },
 };

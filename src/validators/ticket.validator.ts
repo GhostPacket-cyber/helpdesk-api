@@ -35,6 +35,11 @@ export const updateTicketSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, 'Informe ao menos um campo para alterar.');
 
+// TECH assume o chamado para si e não envia body; ADMIN informa o técnico em technicianId
+export const assignTicketSchema = z.object({
+  technicianId: z.uuid('technicianId deve ser um identificador válido.').optional(),
+});
+
 // O id do chamado é numérico; na URL ele chega como texto e é convertido
 export const ticketIdParamSchema = z.object({
   id: z.coerce
@@ -46,3 +51,4 @@ export const ticketIdParamSchema = z.object({
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
+export type AssignTicketInput = z.infer<typeof assignTicketSchema>;

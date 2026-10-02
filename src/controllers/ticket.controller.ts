@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ticketService } from '../services/ticket.service';
-import { CreateTicketInput, UpdateTicketInput } from '../validators/ticket.validator';
+import { AssignTicketInput, CreateTicketInput, UpdateTicketInput } from '../validators/ticket.validator';
 
 type IdParams = { id: string };
 
@@ -24,5 +24,12 @@ export async function getTicket(req: Request<IdParams>, res: Response): Promise<
 export async function updateTicket(req: Request<IdParams>, res: Response): Promise<void> {
   const ticket = await ticketService.update(Number(req.params.id), req.body as UpdateTicketInput, req.user!);
 
+  res.status(200).json(ticket);
+}
+
+export async function assignTicket(req: Request<IdParams>, res: Response): Promise<void> {
+  const ticket = await ticketService.assign(Number(req.params.id), req.body as AssignTicketInput, req.user!);
+
+  // 200 e não 201: a ação altera um chamado existente, não cria um recurso novo
   res.status(200).json(ticket);
 }
