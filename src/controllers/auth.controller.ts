@@ -15,3 +15,8 @@ export async function login(req: Request, res: Response): Promise<void> {
   // 200 e não 201: o login não cria um recurso consultável na API
   res.status(200).json(result);
 }
+
+export function me(req: Request, res: Response): void {
+  // req.user foi preenchido pelo middleware authenticate
+  res.status(200).json(req.user);
+}
