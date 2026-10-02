@@ -40,12 +40,35 @@ export const assignTicketSchema = z.object({
   technicianId: z.uuid('technicianId deve ser um identificador válido.').optional(),
 });
 
+const statusField = z.enum(
+  ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED'],
+  'Status deve ser OPEN, IN_PROGRESS, WAITING, RESOLVED ou CLOSED.',
+);
+
 // Aqui só se confere que o valor é um status existente; se a transição é permitida é regra do service
 export const updateTicketStatusSchema = z.object({
-  status: z.enum(
-    ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED'],
-    'Status deve ser OPEN, IN_PROGRESS, WAITING, RESOLVED ou CLOSED.',
-  ),
+  status: statusField,
+});
+
+// Parâmetros de GET /tickets. Tudo na query string chega como texto, por isso page e limit são convertidos.
+// Todos os filtros são opcionais e combináveis: ?status=OPEN&priority=HIGH&page=2
+export const listTicketsQuerySchema = z.object({
+  status: statusField.optional(),
+  priority: priorityField.optional(),
+  category: categoryField.optional(),
+  technician: z.uuid('technician deve ser o identificador de um técnico.').optional(),
+  page: z.coerce
+    .number('page deve ser um número.')
+    .int('page deve ser um número inteiro.')
+    .min(1, 'page deve ser no mínimo 1.')
+    .default(1),
+  // O teto impede que um cliente peça o banco inteiro em uma única requisição
+  limit: z.coerce
+    .number('limit deve ser um número.')
+    .int('limit deve ser um número inteiro.')
+    .min(1, 'limit deve ser no mínimo 1.')
+    .max(100, 'limit deve ser no máximo 100.')
+    .default(20),
 });
 
 // O id do chamado é numérico; na URL ele chega como texto e é convertido
@@ -61,3 +84,4 @@ export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;
 export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
 export type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
+export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;

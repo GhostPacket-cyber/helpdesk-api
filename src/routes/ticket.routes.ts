@@ -11,11 +11,12 @@ import {
 } from '../controllers/ticket.controller';
 import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
-import { validateBody, validateParams } from '../middlewares/validate';
+import { validateBody, validateParams, validateQuery } from '../middlewares/validate';
 import { createCommentSchema } from '../validators/comment.validator';
 import {
   assignTicketSchema,
   createTicketSchema,
+  listTicketsQuerySchema,
   ticketIdParamSchema,
   updateTicketSchema,
   updateTicketStatusSchema,
@@ -27,7 +28,7 @@ const router = Router();
 router.use(authenticate);
 
 router.post('/', authorize('USER', 'ADMIN'), validateBody(createTicketSchema), createTicket);
-router.get('/', listTickets);
+router.get('/', validateQuery(listTicketsQuerySchema), listTickets);
 router.get('/:id', validateParams(ticketIdParamSchema), getTicket);
 router.patch('/:id', validateParams(ticketIdParamSchema), validateBody(updateTicketSchema), updateTicket);
 router.post(

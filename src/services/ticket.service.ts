@@ -7,6 +7,7 @@ import type { AuthUser } from '../types/express';
 import {
   AssignTicketInput,
   CreateTicketInput,
+  ListTicketsQuery,
   UpdateTicketInput,
   UpdateTicketStatusInput,
 } from '../validators/ticket.validator';
@@ -75,8 +76,18 @@ export const ticketService = {
     return ticketRepository.create({ ...data, requesterId: actor.id }, [{ action: 'CREATED', userId: actor.id }]);
   },
 
-  list(actor: AuthUser) {
-    return ticketRepository.findMany(visibilityFilter(actor));
+  async list({ status, priority, category, technician, page, limit }: ListTicketsQuery, actor: AuthUser) {
+    // Os filtros pedidos só restringem dentro do que o perfil já pode ver, nunca ampliam
+    const where: Prisma.TicketWhereInput = {
+      AND: [visibilityFilter(actor), { status, priority, category, technicianId: technician }],
+    };
+
+    const { items, total } = await ticketRepository.findPage(where, page, limit);
+
+    return {
+      data: items,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   },
 
   async getById(id: number, actor: AuthUser) {

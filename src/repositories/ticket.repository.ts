@@ -33,8 +33,22 @@ export const ticketRepository = {
     });
   },
 
-  findMany(where: Prisma.TicketWhereInput) {
-    return prisma.ticket.findMany({ where, include, orderBy: { createdAt: 'desc' } });
+  // Devolve uma página de chamados e o total que atende ao filtro (necessário para calcular as páginas).
+  // As duas consultas rodam na mesma transação, para o total corresponder à página lida.
+  async findPage(where: Prisma.TicketWhereInput, page: number, limit: number) {
+    const [items, total] = await prisma.$transaction([
+      prisma.ticket.findMany({
+        where,
+        include,
+        // O id desempata chamados com a mesma data, mantendo a ordem estável entre as páginas
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    return { items, total };
   },
 
   findById(id: number) {

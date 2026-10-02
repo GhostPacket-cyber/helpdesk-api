@@ -3,6 +3,7 @@ import { ticketService } from '../services/ticket.service';
 import {
   AssignTicketInput,
   CreateTicketInput,
+  ListTicketsQuery,
   UpdateTicketInput,
   UpdateTicketStatusInput,
 } from '../validators/ticket.validator';
@@ -18,7 +19,8 @@ export async function createTicket(req: Request, res: Response): Promise<void> {
 }
 
 export async function listTickets(req: Request, res: Response): Promise<void> {
-  res.status(200).json(await ticketService.list(req.user!));
+  // res.locals.query foi preenchido por validateQuery, já com page e limit convertidos em número
+  res.status(200).json(await ticketService.list(res.locals.query as ListTicketsQuery, req.user!));
 }
 
 export async function getTicket(req: Request<IdParams>, res: Response): Promise<void> {

@@ -26,6 +26,15 @@ export function validateBody(schema: z.ZodType) {
   };
 }
 
+// Valida a query string (ex.: ?status=OPEN&page=2).
+// No Express 5 req.query é somente leitura, então o resultado convertido fica em res.locals.query.
+export function validateQuery(schema: z.ZodType) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    res.locals.query = parseOrThrow(schema, req.query);
+    next();
+  };
+}
+
 // Valida os parâmetros da URL (ex.: o :id de /users/:id)
 export function validateParams(schema: z.ZodType) {
   return (req: Request, _res: Response, next: NextFunction): void => {
