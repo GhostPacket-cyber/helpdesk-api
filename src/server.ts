@@ -1,7 +1,7 @@
-const appName: string = 'Help Desk API';
+import app from './app';
 
-function buildStartupMessage(name: string, nodeVersion: string): string {
-  return `${name} — ambiente configurado (Node ${nodeVersion})`;
-}
+const port = Number(process.env.PORT) || 3000;
 
-console.log(buildStartupMessage(appName, process.version));
+app.listen(port, () => {
+  console.log(`Help Desk API rodando em http://localhost:${port}`);
+});
