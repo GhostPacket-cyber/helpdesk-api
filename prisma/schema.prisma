@@ -1,0 +1,11 @@
+// Schema do Prisma: descreve o banco de dados da aplicação.
+// Os modelos (User, Ticket, Comment, TicketHistory) entram na Etapa 5.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -20,3 +20,6 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Prisma Client gerado (recriado com `npm run db:generate`)
+/src/generated/prisma
