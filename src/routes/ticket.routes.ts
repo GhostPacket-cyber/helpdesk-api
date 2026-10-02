@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createComment, listComments } from '../controllers/comment.controller';
 import {
   assignTicket,
   createTicket,
@@ -10,6 +11,7 @@ import {
 import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
 import { validateBody, validateParams } from '../middlewares/validate';
+import { createCommentSchema } from '../validators/comment.validator';
 import {
   assignTicketSchema,
   createTicketSchema,
@@ -41,5 +43,9 @@ router.patch(
   validateBody(updateTicketStatusSchema),
   updateTicketStatus,
 );
+
+// Comentários são um sub-recurso do chamado: só existem dentro de um
+router.post('/:id/comments', validateParams(ticketIdParamSchema), validateBody(createCommentSchema), createComment);
+router.get('/:id/comments', validateParams(ticketIdParamSchema), listComments);
 
 export default router;
