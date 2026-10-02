@@ -1,5 +1,4 @@
 // Schema do Prisma: descreve o banco de dados da aplicação.
-// Os modelos (User, Ticket, Comment, TicketHistory) entram na Etapa 5.
 
 generator client {
   provider = "prisma-client"
@@ -8,4 +7,122 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  USER
+  TECH
+  ADMIN
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Status {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum Category {
+  HARDWARE
+  SOFTWARE
+  NETWORK
+  ACCESS
+  PRINTER
+  OTHER
+}
+
+enum HistoryAction {
+  CREATED
+  ASSIGNED
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  COMMENT_ADDED
+  UPDATED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Um usuário se relaciona com chamados de duas formas, por isso as relações têm nome
+  requestedTickets Ticket[]        @relation("TicketRequester")
+  assignedTickets  Ticket[]        @relation("TicketTechnician")
+  comments         Comment[]
+  historyEntries   TicketHistory[]
+
+  @@map("users")
+}
+
+model Ticket {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  category    Category
+  priority    Priority  @default(MEDIUM)
+  status      Status    @default(OPEN)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  closedAt    DateTime? @map("closed_at")
+
+  requesterId String @map("requester_id") @db.Uuid
+  requester   User   @relation("TicketRequester", fields: [requesterId], references: [id])
+
+  // Opcional: fica nulo até um técnico assumir o chamado
+  technicianId String? @map("technician_id") @db.Uuid
+  technician   User?   @relation("TicketTechnician", fields: [technicianId], references: [id])
+
+  comments Comment[]
+  history  TicketHistory[]
+
+  @@index([requesterId])
+  @@index([technicianId])
+  @@index([status])
+  @@map("tickets")
+}
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  authorId String @map("author_id") @db.Uuid
+  author   User   @relation(fields: [authorId], references: [id])
+
+  ticketId Int    @map("ticket_id")
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  @@index([ticketId])
+  @@map("comments")
+}
+
+model TicketHistory {
+  id        String        @id @default(uuid()) @db.Uuid
+  action    HistoryAction
+  oldValue  String?       @map("old_value")
+  newValue  String?       @map("new_value")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  ticketId Int    @map("ticket_id")
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  // Quem realizou a ação
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_history")
 }
