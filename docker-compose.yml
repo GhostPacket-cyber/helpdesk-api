@@ -1,3 +1,11 @@
+# As variáveis ${...} são lidas do arquivo .env desta pasta.
+#
+#   docker compose up -d --build   sobe tudo: banco, migrations e API
+#   docker compose up -d db        sobe só o banco (para desenvolver com `npm run dev`)
+
+# Dentro da rede do Docker o banco é alcançado pelo nome do serviço (db), não por localhost
+x-database-url: &database-url postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+
 services:
   db:
     image: postgres:17-alpine
@@ -16,6 +24,45 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Aplica as migrations pendentes e termina. Usa o estágio de build, que contém o Prisma CLI.
+  migrate:
+    build:
+      context: .
+      target: build
+    container_name: helpdesk-migrate
+    command: npx prisma migrate deploy
+    environment:
+      DATABASE_URL: *database-url
+      # Usadas apenas pelo seed (`docker compose run --rm migrate npm run db:seed`),
+      # que carrega a configuração completa da aplicação
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runtime
+    container_name: helpdesk-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: *database-url
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      # A API só inicia depois que as migrations terminarem com sucesso
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   db_data:

@@ -1,0 +1,24 @@
+# O que não deve ser enviado ao Docker na hora do build.
+# Deixa o build mais rápido e impede que segredos entrem na imagem.
+
+# Reinstalado e recompilado dentro da imagem
+node_modules
+dist
+src/generated
+
+# Segredos: as variáveis chegam ao contêiner pelo docker-compose, nunca por arquivo copiado
+.env
+.env.*
+
+# Não usados em produção
+.git
+.gitignore
+tests
+coverage
+requests
+jest.config.js
+docker-compose.yml
+Dockerfile
+.dockerignore
+*.md
+*.log

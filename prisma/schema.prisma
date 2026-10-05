@@ -1,8 +1,10 @@
 // Schema do Prisma: descreve o banco de dados da aplicação.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  // Explícito para o cliente ser gerado igual em qualquer ambiente (o projeto compila para CommonJS)
+  moduleFormat = "cjs"
 }
 
 datasource db {
