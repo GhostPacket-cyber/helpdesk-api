@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "API REST para gerenciamento de chamados de suporte técnico",
   "private": true,
+  "author": "GhostPacket-cyber",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GhostPacket-cyber/helpdesk-api.git"
+  },
+  "keywords": ["help-desk", "rest-api", "express", "typescript", "prisma", "postgresql", "jwt"],
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

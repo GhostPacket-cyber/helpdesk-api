@@ -16,6 +16,7 @@ src/generated
 tests
 coverage
 requests
+docs
 jest.config.js
 docker-compose.yml
 Dockerfile
