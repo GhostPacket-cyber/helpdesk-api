@@ -71,13 +71,12 @@ export const listTicketsQuerySchema = z.object({
     .default(20),
 });
 
-// O id do chamado é numérico; na URL ele chega como texto e é convertido
+// O id do chamado é numérico. Na URL ele chega como texto: aceita-se apenas dígitos
+// (sem "1e3", "0x10" ou espaços) e dentro do limite do tipo inteiro do banco.
 export const ticketIdParamSchema = z.object({
-  id: z.coerce
-    .number('Identificador inválido.')
-    .int('Identificador inválido.')
-    .positive('Identificador inválido.')
-    .max(2147483647, 'Identificador inválido.'),
+  id: z
+    .string()
+    .refine((value) => /^[1-9]\d{0,9}$/.test(value) && Number(value) <= 2147483647, 'Identificador inválido.'),
 });
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;

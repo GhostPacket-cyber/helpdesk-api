@@ -2,12 +2,15 @@ import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import { AppError } from '../errors/AppError';
 
-function parseOrThrow(schema: z.ZodType, data: unknown): unknown {
+type Source = 'body' | 'query' | 'params';
+
+function parseOrThrow(schema: z.ZodType, data: unknown, source: Source): unknown {
   const result = schema.safeParse(data);
 
   if (!result.success) {
     const details = result.error.issues.map((issue) => ({
-      field: issue.path.join('.'),
+      // Erro sem campo específico (ex.: corpo não é um objeto) é atribuído à origem
+      field: issue.path.join('.') || source,
       message: issue.message,
     }));
 
@@ -21,7 +24,7 @@ function parseOrThrow(schema: z.ZodType, data: unknown): unknown {
 export function validateBody(schema: z.ZodType) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     // Sem body, req.body é undefined: validar {} gera um erro por campo obrigatório
-    req.body = parseOrThrow(schema, req.body ?? {});
+    req.body = parseOrThrow(schema, req.body ?? {}, 'body');
     next();
   };
 }
@@ -30,7 +33,7 @@ export function validateBody(schema: z.ZodType) {
 // No Express 5 req.query é somente leitura, então o resultado convertido fica em res.locals.query.
 export function validateQuery(schema: z.ZodType) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    res.locals.query = parseOrThrow(schema, req.query);
+    res.locals.query = parseOrThrow(schema, req.query, 'query');
     next();
   };
 }
@@ -38,7 +41,7 @@ export function validateQuery(schema: z.ZodType) {
 // Valida os parâmetros da URL (ex.: o :id de /users/:id)
 export function validateParams(schema: z.ZodType) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    parseOrThrow(schema, req.params);
+    parseOrThrow(schema, req.params, 'params');
     next();
   };
 }
