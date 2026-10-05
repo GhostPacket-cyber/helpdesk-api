@@ -6,7 +6,7 @@ import type { AuthUser } from '../types/express';
 import { CreateUserInput, UpdateUserInput } from '../validators/user.validator';
 
 // Custo do bcrypt: cada +1 dobra o tempo para gerar (e para atacar) um hash
-const SALT_ROUNDS = 10;
+export const SALT_ROUNDS = 10;
 
 function emailAlreadyExists(): AppError {
   return new AppError(409, 'EMAIL_ALREADY_EXISTS', 'Já existe um usuário com este email.');

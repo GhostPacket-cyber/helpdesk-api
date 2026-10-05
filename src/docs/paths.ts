@@ -33,6 +33,7 @@ const userId = {
 
 const ticketClosed = errorResponse('O chamado está encerrado.', 'TICKET_CLOSED', 'Chamado encerrado não pode ser alterado.');
 const emailConflict = errorResponse('Email já cadastrado.', 'EMAIL_ALREADY_EXISTS', 'Já existe um usuário com este email.');
+const tooManyRequests = (description: string, message: string) => errorResponse(description, 'TOO_MANY_REQUESTS', message);
 
 // Rotas públicas declaram `security: []` para sobrepor a exigência global de token
 const publicRoute = { security: [] };
@@ -61,6 +62,7 @@ export const paths = {
         201: json('Conta criada.', ref('User')),
         400: response('ValidationError'),
         409: emailConflict,
+        429: tooManyRequests('Mais de 20 cadastros a partir do mesmo endereço em uma hora.', 'Muitos cadastros a partir deste endereço. Tente novamente mais tarde.'),
       },
     },
   },
@@ -80,6 +82,7 @@ export const paths = {
         400: response('ValidationError'),
         401: errorResponse('Email inexistente ou senha incorreta.', 'INVALID_CREDENTIALS', 'Email ou senha inválidos.'),
         403: errorResponse('Senha correta, mas a conta está desativada.', 'USER_INACTIVE', 'Usuário desativado. Procure um administrador.'),
+        429: tooManyRequests('Mais de 10 tentativas de login malsucedidas a partir do mesmo endereço em 15 minutos.', 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.'),
       },
     },
   },

@@ -7,6 +7,7 @@ export const tokenService = {
   // O payload é apenas codificado, não criptografado: nunca coloque dados sensíveis nele
   signAccessToken(user: { id: string; role: Role }): string {
     return jwt.sign({ role: user.role }, env.JWT_SECRET, {
+      algorithm: 'HS256',
       subject: user.id,
       expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
     });
@@ -15,7 +16,8 @@ export const tokenService = {
   // Confere assinatura e validade, e devolve o id do usuário dono do token
   verifyAccessToken(token: string): string {
     try {
-      const payload = jwt.verify(token, env.JWT_SECRET);
+      // Aceita somente o algoritmo que a própria API usa para assinar
+      const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
 
       if (typeof payload === 'string' || !payload.sub) {
         throw new AppError(401, 'TOKEN_INVALID', 'Token inválido.');

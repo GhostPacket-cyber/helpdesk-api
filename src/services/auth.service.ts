@@ -3,7 +3,10 @@ import { AppError } from '../errors/AppError';
 import { userRepository } from '../repositories/user.repository';
 import { LoginInput, RegisterInput } from '../validators/auth.validator';
 import { tokenService } from './token.service';
-import { userService } from './user.service';
+import { SALT_ROUNDS, userService } from './user.service';
+
+// Hash de uma senha qualquer, usado apenas para igualar o tempo de resposta do login
+const DUMMY_HASH = bcrypt.hashSync('senha-que-nenhum-usuario-tem', SALT_ROUNDS);
 
 // Mesma resposta para email inexistente e senha errada: não revela quais emails estão cadastrados
 function invalidCredentials(): AppError {
@@ -19,6 +22,9 @@ export const authService = {
   async login({ email, password }: LoginInput) {
     const found = await userRepository.findByEmailWithPassword(email);
     if (!found) {
+      // Gasta o mesmo tempo de uma comparação real: sem isso, a resposta mais rápida
+      // para email inexistente permitiria descobrir quais emails estão cadastrados
+      await bcrypt.compare(password, DUMMY_HASH);
       throw invalidCredentials();
     }
 
